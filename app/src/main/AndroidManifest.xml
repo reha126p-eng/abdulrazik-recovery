@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS"/>
 
     <application
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="true"
         android:label="ABDULRAZIK RECOVERY"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
