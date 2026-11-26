@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.ContentUris;
 import android.content.pm.PackageManager;
 import android.Manifest;
+import android.os.Build;
 import android.provider.Settings;
 import android.provider.MediaStore;
 import android.database.Cursor;
@@ -111,12 +112,59 @@ public class MainActivity extends Activity {
         output.setText("پیام‌های ذخیره‌شده واتساپ:\n\n" + data);
     }
 
+    boolean hasMediaPermission(int kind) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            String permission = kind == 0
+                    ? Manifest.permission.READ_MEDIA_IMAGES
+                    : kind == 1
+                    ? Manifest.permission.READ_MEDIA_AUDIO
+                    : Manifest.permission.READ_MEDIA_VIDEO;
+
+            if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+
+            if (Build.VERSION.SDK_INT >= 34 && kind != 1
+                    && checkSelfPermission("android.permission.READ_MEDIA_VISUAL_USER_SELECTED")
+                    == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+
+            return false;
+        }
+
+        return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    void requestMediaPermission(int kind) {
+        String[] permissions;
+
+        if (Build.VERSION.SDK_INT >= 34 && kind != 1) {
+            permissions = new String[]{
+                kind == 0 ? Manifest.permission.READ_MEDIA_IMAGES
+                          : Manifest.permission.READ_MEDIA_VIDEO,
+                "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+            };
+        } else if (Build.VERSION.SDK_INT >= 33) {
+            permissions = new String[]{
+                kind == 0 ? Manifest.permission.READ_MEDIA_IMAGES
+                        : kind == 1 ? Manifest.permission.READ_MEDIA_AUDIO
+                        : Manifest.permission.READ_MEDIA_VIDEO
+            };
+        } else {
+            permissions = new String[]{
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            };
+        }
+
+        requestPermissions(permissions, 101);
+    }
+
     void scanMedia(int kind) {
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
+        if (!hasMediaPermission(kind)) {
             pendingMediaKind = kind;
-            requestPermissions(
-                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 101);
+            requestMediaPermission(kind);
             return;
         }
 
@@ -222,15 +270,16 @@ public class MainActivity extends Activity {
             int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
 
-        if (results.length > 0
-                && results[0] == PackageManager.PERMISSION_GRANTED) {
-            if (requestCode == 101 && pendingMediaKind >= 0) {
-                int kind = pendingMediaKind;
-                pendingMediaKind = -1;
+        if (requestCode == 101 && pendingMediaKind >= 0) {
+            int kind = pendingMediaKind;
+            pendingMediaKind = -1;
+
+            if (hasMediaPermission(kind)) {
                 scanMedia(kind);
+            } else {
+                output.setText("دسترسی لازم داده نشد.");
             }
-        } else {
-            output.setText("دسترسی لازم داده نشد.");
         }
     }
+
 }
