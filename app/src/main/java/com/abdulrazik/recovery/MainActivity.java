@@ -58,7 +58,6 @@ public class MainActivity extends Activity {
         addButton("فعال‌سازی ذخیره پیام‌های واتساپ", v ->
             startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
         addButton("نمایش پیام‌های ذخیره‌شده واتساپ", v -> showWhatsApp());
-        addButton("دسترسی و پشتیبان‌گیری پیامک‌ها", v -> readSMS());
 
         addSpace();
         TextView mediaTitle = new TextView(this);
@@ -110,44 +109,6 @@ public class MainActivity extends Activity {
         String data = prefs.getString("whatsapp_messages",
             "هنوز پیامی ذخیره نشده است.\nابتدا دسترسی اعلان‌ها را فعال کن.");
         output.setText("پیام‌های ذخیره‌شده واتساپ:\n\n" + data);
-    }
-
-    void readSMS() {
-        if (checkSelfPermission(Manifest.permission.READ_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(
-                new String[]{Manifest.permission.READ_SMS}, 100);
-            return;
-        }
-
-        StringBuilder result = new StringBuilder();
-        Cursor cursor = null;
-        try {
-            cursor = getContentResolver().query(
-                Uri.parse("content://sms/inbox"),
-                new String[]{"address", "body", "date"},
-                null, null, "date DESC");
-            if (cursor != null) {
-                int count = 0;
-                while (cursor.moveToNext() && count < 100) {
-                    result.append("فرستنده: ").append(cursor.getString(0))
-                        .append("\nپیام: ").append(cursor.getString(1))
-                        .append("\n--------------------\n");
-                    count++;
-                }
-            }
-        } catch (Exception e) {
-            result.append("خطا: ").append(e.getMessage());
-        } finally {
-            if (cursor != null) cursor.close();
-        }
-
-        if (result.length() == 0) result.append("پیامکی پیدا نشد.");
-
-        SharedPreferences prefs =
-            getSharedPreferences("recovery_data", MODE_PRIVATE);
-        prefs.edit().putString("sms_backup", result.toString()).apply();
-        output.setText("پیامک‌های موجود و ذخیره‌شده:\n\n" + result);
     }
 
     void scanMedia(int kind) {
@@ -249,7 +210,6 @@ public class MainActivity extends Activity {
         output.setText(
             "۱. دسترسی اعلان‌ها را فعال کن.\n\n" +
             "۲. اعلان‌های واتساپ را روشن نگه دار.\n\n" +
-            "۳. برای پیامک‌ها دسترسی خواندن را بده.\n\n" +
             "۴. برای جست‌وجوی رسانه‌ها مجوز حافظه را بده.\n\n" +
             "این بخش رسانه‌های موجود و قابل دسترسی را پیدا می‌کند. " +
             "فایل‌هایی که کاملاً پاک شده‌اند و نسخه‌ای از آن‌ها باقی نمانده، " +
@@ -264,9 +224,7 @@ public class MainActivity extends Activity {
 
         if (results.length > 0
                 && results[0] == PackageManager.PERMISSION_GRANTED) {
-            if (requestCode == 100) {
-                readSMS();
-            } else if (requestCode == 101 && pendingMediaKind >= 0) {
+            if (requestCode == 101 && pendingMediaKind >= 0) {
                 int kind = pendingMediaKind;
                 pendingMediaKind = -1;
                 scanMedia(kind);
